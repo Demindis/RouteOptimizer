@@ -1,0 +1,53 @@
+@if (Step is null)
+{
+    <div class="empty-state"><h3>Начните с первого шага</h3><p>Нажмите «Выполнить шаг» сверху. Здесь появятся матрицы редукции, оценки и две ветви поиска.</p><p>Можно также рассчитать маршрут целиком, затем просмотреть сохранённые шаги.</p></div>
+}
+else
+{
+    <div class="step-heading"><h3>Узел @Step.NodeId · @DisplayText.State(Step.State)</h3><span>Нижняя оценка <strong>@Step.LowerBound</strong> мин</span></div>
+    <div class="step-context"><span>Родитель: @(Step.ParentId?.ToString() ?? "нет, корень дерева")</span><span>@DisplayText.Kind(Step.Kind)</span>
+        <span>Включённые дуги: @(Step.IncludedArcs.Count == 0 ? "пока нет" : string.Join(", ", Step.IncludedArcs.Select(DisplayText.Arc)))</span></div>
+    @if (Step.State == NodeState.PrunedByBound)
+    { <p class="explanation-note">Ветвь отсечена: её нижняя оценка не меньше стоимости лучшего маршрута, найденного к моменту обработки этого узла.</p> }
+    <ReductionDetails Reduction="Step.Reduction" SelectedArc="Step.Branch" />
+    @if (Step.Branch is { } arc)
+    {
+        var selected = Step.Penalties.First(p => p.Arc == arc);
+        <div class="branch-explanation"><div><h3>Ветвление по дуге @DisplayText.Arc(arc)</h3><p>@(Problem is null ? "" : $"{Problem.Names[arc.From]} → {Problem.Names[arc.To]}")</p></div>
+            <p class="formula">Штраф = @DisplayText.Value(Alternative(arc, true)) + @DisplayText.Value(Alternative(arc, false)) = <strong>@DisplayText.Value(selected.Penalty)</strong></p>
+        </div>
+        <p class="supporting">Это максимальный штраф среди нулей: минимум другой дуги в строке плюс минимум другой дуги в столбце. Выбранная ячейка выделена в матрицах.</p>
+        <details class="penalties-details" open><summary>Штрафы всех нулевых элементов · @Step.Penalties.Count</summary>
+            <div class="table-scroll penalty-scroll"><table class="data-table"><thead><tr><th scope="col">Дуга</th><th scope="col" class="numeric">Минимум в строке без дуги</th><th scope="col" class="numeric">Минимум в столбце без дуги</th><th scope="col" class="numeric">Штраф</th><th scope="col">Выбор</th></tr></thead><tbody>
+                @foreach (var p in Step.Penalties)
+                { <tr class="@(p.Arc == arc ? "selected-row" : "")"><td>@DisplayText.Arc(p.Arc)</td><td class="numeric">@DisplayText.Value(Alternative(p.Arc, true))</td><td class="numeric">@DisplayText.Value(Alternative(p.Arc, false))</td><td class="numeric">@DisplayText.Value(p.Penalty)</td><td>@(p.Arc == arc ? "Выбрана для ветвления" : "")</td></tr> }
+            </tbody></table></div>
+        </details>
+    }
+    @if (Step.Children.Count > 0) { <h3 class="subsection-title">Две подзадачи</h3><p class="supporting">Ниже — состояния ветвей сразу после создания. Последующую обработку можно открыть в дереве поиска.</p> }
+    @foreach (var child in Step.Children)
+    {
+        <details class="child-details" @key="child.NodeId">
+            <summary><span>@DisplayText.Kind(child.Kind) @DisplayText.Arc(child.Arc)</span><span>Узел @child.NodeId · нижняя оценка @child.LowerBound · @DisplayText.State(child.State)</span></summary>
+            <div class="child-content">@if (child.Reduction.Feasible) { <p class="formula">Нижняя оценка: @Step.LowerBound + @child.Reduction.AddedBound = <strong>@child.LowerBound</strong></p> } else { <p class="field-error">Подзадача недопустима. Её оценка не используется для продолжения поиска.</p> }
+                <p>@(child.Kind == BranchKind.Include ? $"Дуга обязательна. Строка {child.Arc.From + 1} и столбец {child.Arc.To + 1} удалены." : "Дуга запрещена. Её стоимость заменена на ∞.")</p>
+                @if (child.State == NodeState.PrunedByBound) { <p class="explanation-note">Отсечение по оценке: эта ветвь не могла улучшить текущий на тот момент рекорд.</p> }
+                @if (child.SubtourProhibitions.Count > 0) { <p>Чтобы не замкнуть отдельный подцикл, запрещены дуги: <strong>@string.Join(", ", child.SubtourProhibitions.Select(DisplayText.Arc))</strong>.</p> }
+                <ReductionDetails Reduction="child.Reduction" />
+            </div>
+        </details>
+    }
+}
+@code {
+    [Parameter] public SearchSnapshot? Step { get; set; }
+    [Parameter] public TspProblem? Problem { get; set; }
+    // Presentation of existing snapshot values only; no search state is changed.
+    private long? Alternative(Arc arc, bool inRow)
+    {
+        var m = Step!.Reduction.Reduced;
+        var r = Enumerable.Range(0, m.Rows.Count).First(i => m.Rows[i] == arc.From);
+        var c = Enumerable.Range(0, m.Columns.Count).First(i => m.Columns[i] == arc.To);
+        return inRow ? Enumerable.Range(0, m.Columns.Count).Where(j => j != c).Select(j => m[r, j]).Min()
+            : Enumerable.Range(0, m.Rows.Count).Where(i => i != r).Select(i => m[i, c]).Min();
+    }
+}

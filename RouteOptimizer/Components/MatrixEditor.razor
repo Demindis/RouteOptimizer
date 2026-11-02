@@ -1,0 +1,75 @@
+@inject RouteOptimizer.Application.IProblemWorkbook Workbook
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<section class="matrix-editor" aria-labelledby="matrix-title">
+    <div class="section-title-row"><div><h2 id="matrix-title">Матрица стоимостей</h2><p class="supporting">Время переезда между объектами, в минутах.</p></div>
+        <div class="sample-picker"><label for="sample-select">Готовый пример</label><div class="inline-controls">
+            <select id="sample-select" @bind="_sample" disabled="@Disabled">
+                <option value="teaching">Инфраструктура · 6 объектов</option>
+                @foreach (var n in new[] { 4, 6, 8, 10 }) { <option value="@n">Эксперимент · @DisplayText.ObjectCount(n)</option> }
+            </select>
+            <MudButton Variant="Variant.Outlined" Disabled="Disabled" OnClick="() => LoadExample.InvokeAsync(_sample)">Загрузить пример</MudButton>
+        </div></div>
+    </div>
+    <div class="matrix-settings">
+        <label for="matrix-size">Количество объектов<select id="matrix-size" value="@Draft.Size" disabled="@Disabled" @onchange="e => Resize(int.Parse(e.Value!.ToString()!))">
+            @foreach (var n in Enumerable.Range(3, 8)) { <option value="@n">@n</option> }
+        </select></label>
+        <label for="start-object">Начало и конец маршрута<select id="start-object" value="@Draft.Start" disabled="@Disabled" @onchange="e => SetStart(int.Parse(e.Value!.ToString()!))">
+            @foreach (var i in Enumerable.Range(0, Draft.Size)) { <option value="@i">@(i + 1). @Draft.Names[i]</option> }
+        </select></label>
+        <p class="field-note">Из строки — в столбец.<br /><strong>0</strong> — допустимая стоимость, <strong>∞</strong> — переход запрещён.</p>
+    </div>
+    <div class="cell-context" aria-live="polite">
+        @if (_row >= 0 && _row < Draft.Size && _column >= 0 && _column < Draft.Size)
+        {
+            <span><strong>@(_row + 1) → @(_column + 1)</strong> · @Draft.Names[_row] → @Draft.Names[_column]</span>
+            <MudButton Variant="Variant.Text" Disabled="Disabled" OnClick="ToggleForbidden">@(Draft.Forbidden[_row, _column] ? "Разрешить переход" : "Запретить переход")</MudButton>
+        }
+        else { <span>Выберите ячейку для редактирования стоимости или запрета перехода.</span> }
+    </div>
+    <div class="matrix-scroll editor-scroll" tabindex="0" aria-label="Матрица стоимостей, прокрутка таблицы">
+        <table class="cost-matrix"><caption class="sr-only">Стоимость перехода из объекта строки в объект столбца, минуты</caption>
+            <colgroup><col class="object-column" />@for (var j = 0; j < Draft.Size; j++) { <col /> }</colgroup>
+            <thead><tr><th scope="col">Откуда / куда</th>
+                @for (var j = 0; j < Draft.Size; j++) { <th scope="col" class="@(j == _column ? "active-heading" : "")" title="@Draft.Names[j]"><span>@(j + 1)</span><span class="column-name">@Draft.Names[j]</span></th> }
+            </tr></thead>
+            <tbody>@for (var i = 0; i < Draft.Size; i++)
+            {
+                var row = i;
+                <tr @key="row"><th scope="row" class="@(i == _row ? "active-heading" : "")"><label class="object-label"><span>@(i + 1)</span><input @ref="_nameInputs[row]" title="@Draft.Names[i]" aria-label="Название объекта @(i + 1)" aria-invalid="@(string.IsNullOrWhiteSpace(Draft.Names[i]) ? "true" : "false")" value="@Draft.Names[i]" disabled="@Disabled" @oninput="e => Rename(row, e.Value?.ToString() ?? string.Empty)" /></label></th>
+                    @for (var j = 0; j < Draft.Size; j++)
+                    {
+                        var col = j; var invalid = Draft.CellError(i, j) is not null;
+                        <td class="@CellClass(i, j, invalid)">
+                            @if (i == j) { <span class="self-transition" title="Переход в тот же объект запрещён">∞</span> }
+                            else
+                            {
+                                <input @ref="_inputs[row, col]" class="cost-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false"
+                                       aria-label="Стоимость @(i + 1) → @(j + 1)" aria-invalid="@(invalid ? "true" : "false")" aria-describedby="@(invalid ? $"cell-error-{row}-{col}" : "matrix-help")"
+                                       value="@(Draft.Forbidden[i, j] ? "∞" : Draft.Costs[i, j])" disabled="@Disabled"
+                                       @onfocus="() => SelectCell(row, col)" @oninput="e => SetCost(row, col, e.Value?.ToString() ?? string.Empty)" @onkeydown="e => Move(e, row, col)" />
+                                @if (invalid) { <span class="sr-only" id="cell-error-@row-@col">@Draft.CellError(row, col)</span> }
+                            }
+                        </td>
+                    }
+                </tr>
+            }</tbody>
+        </table>
+    </div>
+    @if (FirstError is { } error) { <p class="field-error" id="matrix-field-error" role="alert">@error</p> }
+    <div class="matrix-footer"><p id="matrix-help">Названия объектов редактируются в строках. Tab — следующая ячейка, Enter — вниз. Для запрета введите ∞ или «-».</p><span>@Draft.Size × @Draft.Size</span></div>
+    <div class="excel-import">
+        <div class="control-buttons"><MudButton Variant="Variant.Outlined" Disabled="@(Disabled || _excelBusy)" OnClick="DownloadTemplate">Скачать Excel-шаблон</MudButton>
+            <label class="excel-file">Загрузить Excel<InputFile @key="_excelInputKey" OnChange="ImportExcel" accept=".xlsx" disabled="@(Disabled || _excelBusy)" /></label></div>
+        <p class="supporting">.xlsx, до 1 МБ. Лист «Матрица»: названия в первой строке и столбце, 3–10 объектов. Шаблон заполнен учебным примером. Начало маршрута выберите после загрузки.</p>
+        @if (_excelBusy) { <p role="status">Обработка Excel…</p> }
+        @if (_excelMessage is not null) { <p class="@(_excelFailed ? "field-error" : "supporting")" role="status">@_excelMessage</p> }
+    </div>
+    <details class="matrix-paste"><summary>Вставить матрицу из таблицы</summary>
+        <p>Вставьте квадратную матрицу целиком: значения разделены пробелами, табуляцией или «;», каждая строка — с новой строки. Запрет — ∞ или «-»; диагональ игнорируется.</p>
+        <textarea aria-label="Матрица для вставки" @bind="_pasteText" disabled="@Disabled" rows="4" placeholder="∞ 20 30&#10;15 ∞ 16&#10;3 5 ∞"></textarea>
+        <MudButton Variant="Variant.Outlined" Disabled="Disabled" OnClick="ApplyPaste">Применить матрицу</MudButton>
+        @if (_pasteError is not null) { <p class="field-error" role="alert">@_pasteError</p> }
+    </details>
+</section>

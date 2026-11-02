@@ -1,0 +1,15 @@
+<div class="reduction-grid">
+    <section><h3>До редукции</h3><p class="matrix-caption">Минимумы строк — справа</p><MatrixView Matrix="Reduction.Before" RowMinima="Reduction.RowMinima" SelectedArc="SelectedArc" /></section>
+    <section><h3>После вычитания по строкам</h3><p class="matrix-caption">Минимумы столбцов — снизу</p><MatrixView Matrix="Reduction.AfterRows" ColumnMinima="Reduction.ColumnMinima" SelectedArc="SelectedArc" /></section>
+    <section><h3>После вычитания по столбцам</h3><p class="matrix-caption">Нули — кандидаты для ветвления</p><MatrixView Matrix="Reduction.Reduced" SelectedArc="SelectedArc" /></section>
+</div>
+<div class="reduction-summary"><span>Минимумы строк: <strong>@string.Join(" + ", Reduction.RowMinima.Select(DisplayText.Value))</strong></span>
+    <span>Минимумы столбцов: <strong>@string.Join(" + ", Reduction.ColumnMinima.Select(DisplayText.Value))</strong></span>
+    <span>@(Reduction.Feasible ? "Добавка к оценке:" : "Вычтено до обнаружения недопустимости:") <strong>@Reduction.AddedBound</strong></span></div>
+@if (!Reduction.Feasible)
+{ <p class="field-error">В активной строке или столбце нет разрешённых переходов. Продолжить маршрут в этой ветви невозможно.</p> }
+@if (Reduction.Reduced.Rows.Count == 0) { <p class="supporting">Все выходы и входы определены. Матрица завершена.</p> }
+@code {
+    [Parameter, EditorRequired] public ReductionSnapshot Reduction { get; set; } = default!;
+    [Parameter] public Arc? SelectedArc { get; set; }
+}

@@ -1,0 +1,23 @@
+<section class="calculation-toolbar" aria-label="Управление расчётом">
+    <div class="control-buttons">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="Busy" OnClick="Run" StartIcon="@Icons.Material.Outlined.PlayArrow">@(Finished ? "Рассчитать заново" : "Рассчитать маршрут")</MudButton>
+        <MudButton Variant="Variant.Outlined" Disabled="@(Busy || Finished)" OnClick="Step" StartIcon="@Icons.Material.Outlined.SkipNext">Выполнить шаг</MudButton>
+        <MudButton Variant="Variant.Text" Disabled="@(!CanStop)" OnClick="Stop" StartIcon="@Icons.Material.Outlined.Stop">Остановить</MudButton>
+        <MudButton Variant="Variant.Text" Disabled="Busy" OnClick="Reset" StartIcon="@Icons.Material.Outlined.RestartAlt">Сбросить расчёт</MudButton>
+    </div>
+    <div class="toolbar-status" aria-live="polite"><span class="state-label @StateClass">@(Result is null ? "Готово к расчёту" : DisplayText.Status(Result.Status))</span>
+        @if (Result is not null) { <span>@DisplayText.NodeCount(Result.Statistics.Processed) · @Result.Statistics.Elapsed.TotalMilliseconds.ToString("F1") мс</span> }
+    </div>
+    @if (Busy) { <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="toolbar-progress" /> }
+</section>
+@code {
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Finished { get; set; }
+    [Parameter] public bool CanStop { get; set; }
+    [Parameter] public SolveResult? Result { get; set; }
+    [Parameter] public EventCallback Run { get; set; }
+    [Parameter] public EventCallback Step { get; set; }
+    [Parameter] public EventCallback Stop { get; set; }
+    [Parameter] public EventCallback Reset { get; set; }
+    private string StateClass => Result?.Status switch { SearchStatus.Optimal => "state-success", SearchStatus.Stopped => "state-warning", SearchStatus.Infeasible => "state-danger", _ => "state-neutral" };
+}

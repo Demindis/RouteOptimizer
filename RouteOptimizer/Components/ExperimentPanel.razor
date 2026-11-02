@@ -1,0 +1,51 @@
+@implements IAsyncDisposable
+@inject ILittleSolver Solver
+<h2>Вычислительный эксперимент</h2>
+<p class="experiment-intro">Матрицы 4, 6, 8 и 10 объектов. Начальное зерно 2026, целые затраты от 1 до 60, запрещена только диагональ. Подробный журнал отключён для измерения времени поиска.</p>
+<div class="control-buttons"><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RunAsync" Disabled="@(Disabled || _busy)">Запустить эксперимент</MudButton>
+    <MudButton Variant="Variant.Outlined" OnClick="Stop" Disabled="@(!_busy)">Остановить эксперимент</MudButton></div>
+@if (_busy) { <MudProgressLinear Class="mt-4" Indeterminate="true" Color="Color.Primary" /> }
+@if (_rows.Count > 0)
+{
+    <div class="table-scroll experiment-table"><table class="data-table"><thead><tr><th>Объекты</th><th class="numeric">Стоимость, мин</th><th class="numeric">Активное время, мс</th><th class="numeric">Обработано узлов</th><th>Отсечения: оценка / недопустимость</th><th class="numeric">Максимум открытых</th><th>Статус</th></tr></thead><tbody>
+        @foreach (var row in _rows)
+        { <tr><td>@row.Size</td><td class="numeric">@row.Result.BestRoute?.Cost</td><td class="numeric">@row.Result.Statistics.Elapsed.TotalMilliseconds.ToString("F3")</td><td class="numeric">@row.Result.Statistics.Processed</td><td>@row.Result.Statistics.PrunedByBound / @row.Result.Statistics.Infeasible</td><td class="numeric">@row.Result.Statistics.MaxOpen</td><td>@DisplayText.Status(row.Result.Status)</td></tr> }
+    </tbody></table></div>
+}
+@if (_rows.Count == 0 && !_busy) { <p class="experiment-empty">Запустите эксперимент, чтобы сравнить время и объём точного поиска на четырёх воспроизводимых матрицах.</p> }
+<p class="supporting">Время зависит от браузера, оборудования и прогрева WebAssembly.</p>
+@code {
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<bool> BusyChanged { get; set; }
+    private readonly List<(int Size, SolveResult Result)> _rows = [];
+    private CancellationTokenSource? _cancellation;
+    private ISearchSession? _current;
+    private bool _busy;
+    private async Task RunAsync()
+    {
+        if (_busy || Disabled) return;
+        _busy = true;
+        _rows.Clear();
+        using var cancellation = new CancellationTokenSource();
+        _cancellation = cancellation;
+        await BusyChanged.InvokeAsync(true);
+        try
+        {
+            foreach (var size in new[] { 4, 6, 8, 10 })
+            {
+                if (cancellation.IsCancellationRequested) break;
+                _current = Solver.CreateSession(ProblemSamples.Experiment(size), new SearchOptions(MaxDetailedSteps: 0));
+                while (_current.Result.Status == SearchStatus.Running)
+                {
+                    for (var i = 0; i < 20 && _current.Result.Status == SearchStatus.Running; i++) _current.Advance(cancellation.Token);
+                    await Task.Delay(1);
+                }
+                _rows.Add((size, _current.Result));
+                StateHasChanged();
+            }
+        }
+        finally { _current = null; _cancellation = null; _busy = false; await BusyChanged.InvokeAsync(false); }
+    }
+    private void Stop() { _current?.Stop(); _cancellation?.Cancel(); }
+    public ValueTask DisposeAsync() { Stop(); return ValueTask.CompletedTask; }
+}

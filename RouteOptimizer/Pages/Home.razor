@@ -1,0 +1,43 @@
+﻿@page "/"
+@implements IAsyncDisposable
+<PageTitle>Задача коммивояжёра — RouteOptimizer</PageTitle>
+<div class="page-title"><div><h1>Задача коммивояжёра</h1><p>Задайте стоимости переходов. Найдите замкнутый маршрут и изучите доказательство оптимальности.</p></div><span class="dataset-label">@_datasetName</span></div>
+<SearchControls Busy="@(_busy || _experimentBusy)" Finished="@(_session is not null && _session.Result.Status != SearchStatus.Running)" Result="_session?.Result"
+                CanStop="@(_session?.Result.Status == SearchStatus.Running && !_experimentBusy)" Run="RunAsync" Step="AdvanceAsync" Stop="Stop" Reset="Reset" />
+@if (_error is not null) { <div class="input-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><span><strong>Проверьте исходные данные.</strong> @_error</span></div> }
+@if (_notice is not null) { <p class="change-notice" role="status">@_notice</p> }
+<div class="workspace-sheet">
+    <MudTabs @bind-ActivePanelIndex="_tab" KeepPanelsAlive="true" Class="workspace-tabs" Color="Color.Primary">
+        <MudTabPanel Text="Матрица стоимостей">
+            <div class="task-layout"><MatrixEditor @ref="_editor" Draft="_draft" DraftChanged="OnDraftChanged" LoadExample="LoadExample" Disabled="@(_busy || _experimentBusy)" />
+                <aside class="task-guide"><h2>Как решить задачу</h2><ol>
+                    <li><strong>Задайте переходы</strong><p>Введите время переезда в матрицу или загрузите готовый пример.</p></li>
+                    <li><strong>Запустите поиск</strong><p>«Рассчитать маршрут» найдёт решение целиком. «Выполнить шаг» обработает один узел дерева.</p></li>
+                    <li><strong>Проверьте ответ</strong><p>Изучите маршрут, стоимость каждой дуги и границы. Во вкладке «Ход решения» доступны все преобразования.</p></li>
+                </ol><div class="model-note"><h3>Условия задачи</h3><p>Каждый объект посещается один раз. Маршрут возвращается в начало. Время обслуживания не учитывается.</p><p>Стоимость может отличаться по направлениям. Запрещённые переходы обозначены ∞.</p></div>
+                <dl class="limits-list"><dt>Объекты</dt><dd>3–10</dd><dt>Активное время</dt><dd>до 30 с</dd><dt>Открытые узлы</dt><dd>до 20 000</dd></dl>
+                @if (_session?.Result.BestRoute is { } route) { <div class="task-result-link"><strong>@route.Cost мин</strong><span>@DisplayText.Status(_session.Result.Status)</span><MudButton Variant="Variant.Outlined" OnClick="() => _tab = 2">Открыть результат</MudButton></div> }
+                </aside></div>
+        </MudTabPanel>
+        <MudTabPanel Text="Ход решения">
+            <div class="tab-content">
+                <div class="section-title-row"><div><h2>Разбор алгоритма Литтла</h2><p class="supporting">Нижняя оценка ограничивает возможную стоимость. Верхняя — стоимость лучшего найденного маршрута.</p></div>
+                    @if (_session?.Steps.Any(s => s.State == NodeState.Complete || s.Children.Any(c => c.State == NodeState.Complete)) == true) { <MudButton Variant="Variant.Outlined" OnClick="SelectSolutionStep">К найденному маршруту</MudButton> }</div>
+                @if (_session?.Result.TraceTruncated == true) { <MudAlert Severity="Severity.Warning" Dense="true">Сохранены подробности первых 2 000 обработанных узлов. Поиск и общая статистика продолжались.</MudAlert> }
+                <BranchTable Steps="@(_session?.Steps ?? [])" Selected="_selected" SelectedChanged="SelectStep" OnNodeSelected="SelectNode" />
+                <ReductionView Step="@SelectedStep" Problem="_problem" />
+            </div>
+        </MudTabPanel>
+        <MudTabPanel Text="Маршрут и статистика"><div class="tab-content"><RouteView Problem="_problem" Result="_session?.Result" /><StatisticsPanel Result="_session?.Result" /></div></MudTabPanel>
+        <MudTabPanel Text="Эксперимент"><div class="tab-content"><ExperimentPanel Disabled="_busy" BusyChanged="OnExperimentBusy" /></div></MudTabPanel>
+        <MudTabPanel Text="О методе"><div class="tab-content method-notes">
+            <h2>Как читать решение</h2><p>Метод Литтла решает задачу коммивояжёра: выбирает один замкнутый маршрут минимальной стоимости через все объекты.</p>
+            <div class="help-columns"><section><h3>Редукция матрицы</h3><p>Из каждой строки вычитается её минимальная разрешённая стоимость. Затем то же выполняется для столбцов. Сумма вычтенных минимумов даёт добавку к нижней оценке.</p><p class="formula">Н₀ = Σ минимумов строк + Σ минимумов столбцов</p><p>∞ не участвует в вычитании. Нули показывают кандидатов для ветвления, но сами по себе ещё не образуют допустимый маршрут.</p></section>
+            <section><h3>Штраф и выбранная дуга</h3><p>Для каждого нуля ищутся наименьшая альтернатива в его строке и наименьшая альтернатива в его столбце. Сам ноль исключается из обоих поисков.</p><p class="formula">Штраф(i → j) = минимум строки без j + минимум столбца без i</p><p>Для ветвления выбирается ноль с максимальным штрафом. При отсутствии альтернативы штраф считается бесконечным.</p></section>
+            <section><h3>Две ветви и подциклы</h3><p>В первой ветви переход обязателен: удаляются его строка и столбец. Во второй ветви он запрещается. Матрицы снова редуцируются.</p><p>Замкнуть отдельную цепочку до посещения всех объектов нельзя. Такие переходы запрещаются, чтобы получить один маршрут, а не несколько подциклов.</p></section>
+            <section><h3>Отсечение и доказательство</h3><p>Первая полная допустимая цепочка задаёт верхнюю оценку. Ветвь закрывается, если её нижняя оценка не меньше текущего рекорда, либо в ней нет допустимого продолжения.</p><p class="formula">Нветви ≥ верхняя оценка → улучшение невозможно</p><p>Оптимальность доказана после закрытия всех перспективных ветвей. Остановка по кнопке или лимиту сама по себе доказательством не является.</p></section></div>
+            <h3>Контрольный пример</h3><p>В примере обслуживания инфраструктуры шесть объектов. Нижняя оценка корня — 36 минут, оптимальный маршрут — 1 → 5 → 2 → 4 → 6 → 3 → 1, его стоимость — 39 минут. Данные условные.</p>
+            <h3>Обозначения и состояния</h3><dl class="help-definitions"><dt>Дуга i → j</dt><dd>Направленный переход из объекта i в объект j.</dd><dt>Нижняя оценка</dt><dd>Стоимость, ниже которой не может быть решение в рассматриваемой области поиска.</dd><dt>Верхняя оценка</dt><dd>Стоимость уже найденного допустимого маршрута. До его нахождения конечного значения нет.</dd><dt>Разрыв</dt><dd>Разность между границами; для положительной стоимости также показывается в процентах. При нулевой стоимости используется абсолютная разность.</dd></dl>
+        </div></MudTabPanel>
+    </MudTabs>
+</div>

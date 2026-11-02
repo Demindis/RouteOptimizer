@@ -1,0 +1,46 @@
+# .NET / Blazor build output
+**/bin/
+**/obj/
+artifacts/
+publish/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.binlog
+
+# Visual Studio / Rider / user settings
+.vs/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+*.DotSettings.user
+
+# Local secrets and environment settings
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/appsettings.Local.json
+**/appsettings.*.Local.json
+**/Properties/PublishProfiles/*.pubxml.user
+
+# Browser checks and generated design artifacts
+.playwright-mcp/
+playwright-report/
+test-results/
+.taste-skill/qa/
+.taste-skill/desktop-inspect/
+.impeccable/config.local.json
+.impeccable/live/
+.impeccable/questions/
+
+# Temporary files / OS metadata
+*.log
+*.tmp
+*.bak
+~$*
+.DS_Store
+Thumbs.db
+Desktop.ini

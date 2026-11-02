@@ -1,0 +1,24 @@
+<div class="matrix-scroll"><table class="reduction-matrix"><thead><tr><th scope="col">Из / в</th>
+    @foreach (var col in Matrix.Columns) { <th scope="col" class="@(SelectedArc?.To == col ? "active-heading" : "")">@(col + 1)</th> }
+    @if (RowMinima is not null) { <th scope="col" class="minimum-cell">min</th> }
+</tr></thead><tbody>
+    @for (var r = 0; r < Matrix.Rows.Count; r++)
+    {
+        <tr><th scope="row" class="@(SelectedArc?.From == Matrix.Rows[r] ? "active-heading" : "")">@(Matrix.Rows[r] + 1)</th>
+            @for (var c = 0; c < Matrix.Columns.Count; c++)
+            {
+                var selected = SelectedArc?.From == Matrix.Rows[r] && SelectedArc?.To == Matrix.Columns[c];
+                <td class="@(selected ? "selected-zero" : Matrix[r,c] == 0 ? "zero-cell" : "")">@DisplayText.Value(Matrix[r,c])</td>
+            }
+            @if (RowMinima is not null) { <td class="minimum-cell">@DisplayText.Value(RowMinima[r])</td> }
+        </tr>
+    }
+    @if (ColumnMinima is not null)
+    { <tr class="minima-row"><th scope="row">min</th>@foreach (var min in ColumnMinima) { <td class="minimum-cell">@DisplayText.Value(min)</td> }</tr> }
+</tbody></table></div>
+@code {
+    [Parameter, EditorRequired] public MatrixSnapshot Matrix { get; set; } = default!;
+    [Parameter] public Arc? SelectedArc { get; set; }
+    [Parameter] public IReadOnlyList<long?>? RowMinima { get; set; }
+    [Parameter] public IReadOnlyList<long?>? ColumnMinima { get; set; }
+}

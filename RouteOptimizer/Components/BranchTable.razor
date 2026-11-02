@@ -1,0 +1,33 @@
+@if (Steps.Count > 0)
+{
+    var processedNodes = Steps.ToDictionary(s => s.NodeId);
+    <div class="step-navigation">
+        <MudButton Variant="Variant.Outlined" Disabled="@(Selected == 0)" OnClick="() => SelectedChanged.InvokeAsync(Selected - 1)" StartIcon="@Icons.Material.Outlined.ChevronLeft">Предыдущий</MudButton>
+        <label for="saved-step">Сохранённый шаг<select id="saved-step" value="@Selected" @onchange="e => SelectedChanged.InvokeAsync(int.Parse(e.Value!.ToString()!))">
+            @for (var i = 0; i < Steps.Count; i++) { <option value="@i">@(i + 1) из @Steps.Count · узел @Steps[i].NodeId · нижняя оценка @Steps[i].LowerBound</option> }
+        </select></label>
+        <MudButton Variant="Variant.Outlined" Disabled="@(Selected >= Steps.Count - 1)" OnClick="() => SelectedChanged.InvokeAsync(Selected + 1)" EndIcon="@Icons.Material.Outlined.ChevronRight">Следующий сохранённый</MudButton>
+        <span class="field-note">Новые вычисления — кнопка «Выполнить шаг» сверху.</span>
+    </div>
+    <details class="branch-list"><summary>Дерево поиска · связи и состояния узлов</summary>
+        <div class="table-scroll"><table class="data-table"><thead><tr><th scope="col">Узел</th><th scope="col">Родитель</th><th scope="col">Ограничение</th><th scope="col" class="numeric">Нижняя оценка</th><th scope="col">Состояние при обработке</th></tr></thead><tbody>
+            @foreach (var step in Steps)
+            {
+                @if (step.Kind == BranchKind.Root) { <tr class="@(step.NodeId == Steps[Selected].NodeId ? "selected-row" : "")"><td><button class="text-button" @onclick="() => OnNodeSelected.InvokeAsync(step.NodeId)">@step.NodeId</button></td><td>—</td><td>Исходная задача</td><td class="numeric">@step.LowerBound</td><td>@DisplayText.State(step.State)</td></tr> }
+                @foreach (var child in step.Children)
+                {
+                    var processed = processedNodes.GetValueOrDefault(child.NodeId);
+                    <tr class="@(child.NodeId == Steps[Selected].NodeId ? "selected-row" : "")"><td>
+                        @if (processed is not null) { <button class="text-button" @onclick="() => OnNodeSelected.InvokeAsync(child.NodeId)">@child.NodeId</button> } else { @child.NodeId }
+                        </td><td>@child.ParentId</td><td>@DisplayText.Kind(child.Kind) @DisplayText.Arc(child.Arc)</td><td class="numeric">@child.LowerBound</td><td>@DisplayText.State(processed?.State ?? child.State)@(processed is null && child.State == NodeState.Open ? " (при создании)" : "")</td></tr>
+                }
+            }
+        </tbody></table></div>
+    </details>
+}
+@code {
+    [Parameter] public IReadOnlyList<SearchSnapshot> Steps { get; set; } = [];
+    [Parameter] public int Selected { get; set; }
+    [Parameter] public EventCallback<int> SelectedChanged { get; set; }
+    [Parameter] public EventCallback<int> OnNodeSelected { get; set; }
+}

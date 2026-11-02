@@ -7,7 +7,7 @@ public enum SearchStatus
     Running,
     Optimal,
     Infeasible,
-    Stopped
+    Stopped,
 }
 
 public enum StopReason
@@ -15,7 +15,7 @@ public enum StopReason
     None,
     Cancelled,
     TimeLimit,
-    OpenNodeLimit
+    OpenNodeLimit,
 }
 
 public enum NodeState
@@ -24,14 +24,14 @@ public enum NodeState
     Expanded,
     PrunedByBound,
     Infeasible,
-    Complete
+    Complete,
 }
 
 public enum BranchKind
 {
     Root,
     Include,
-    Exclude
+    Exclude,
 }
 
 public readonly record struct Arc(int From, int To);
@@ -41,15 +41,18 @@ public sealed record ZeroPenalty(Arc Arc, long? Penalty);
 public sealed record SearchOptions(
     TimeSpan? ActiveTimeLimit = null,
     int MaxOpenNodes = 20_000,
-    int MaxDetailedSteps = 2_000)
+    int MaxDetailedSteps = 2_000
+)
 {
     public TimeSpan TimeLimit => ActiveTimeLimit ?? TimeSpan.FromSeconds(30);
 
     internal void Validate()
     {
         if (TimeLimit <= TimeSpan.Zero || MaxOpenNodes < 1 || MaxDetailedSteps < 0)
-            throw new ArgumentOutOfRangeException(nameof(SearchOptions),
-                "Ограничения поиска должны быть положительными; размер журнала может быть нулевым.");
+            throw new ArgumentOutOfRangeException(
+                nameof(SearchOptions),
+                "Ограничения поиска должны быть положительными; размер журнала может быть нулевым."
+            );
     }
 }
 
@@ -77,7 +80,8 @@ public sealed record ReductionSnapshot(
     IReadOnlyList<long?> RowMinima,
     IReadOnlyList<long?> ColumnMinima,
     long AddedBound,
-    bool Feasible);
+    bool Feasible
+);
 
 public sealed record BranchOutcome(
     int NodeId,
@@ -87,7 +91,8 @@ public sealed record BranchOutcome(
     long LowerBound,
     NodeState State,
     ReductionSnapshot Reduction,
-    IReadOnlyList<Arc> SubtourProhibitions);
+    IReadOnlyList<Arc> SubtourProhibitions
+);
 
 public sealed record SearchSnapshot(
     int NodeId,
@@ -99,7 +104,8 @@ public sealed record SearchSnapshot(
     IReadOnlyList<ZeroPenalty> Penalties,
     Arc? Branch,
     IReadOnlyList<Arc> IncludedArcs,
-    IReadOnlyList<BranchOutcome> Children);
+    IReadOnlyList<BranchOutcome> Children
+);
 
 public sealed record SearchStatistics(
     int Created,
@@ -108,7 +114,8 @@ public sealed record SearchStatistics(
     int Infeasible,
     int Open,
     int MaxOpen,
-    TimeSpan Elapsed);
+    TimeSpan Elapsed
+);
 
 public sealed record SolveResult(
     SearchStatus Status,
@@ -116,13 +123,14 @@ public sealed record SolveResult(
     Route? BestRoute,
     long? LowerBound,
     SearchStatistics Statistics,
-    bool TraceTruncated)
+    bool TraceTruncated
+)
 {
-    public long? AbsoluteGap => BestRoute is { } route && LowerBound is { } lower ? route.Cost - lower : null;
+    public long? AbsoluteGap =>
+        BestRoute is { } route && LowerBound is { } lower ? route.Cost - lower : null;
 
-    public double? RelativeGapPercent => BestRoute is { Cost: > 0 } route && AbsoluteGap is { } gap
-        ? gap * 100d / route.Cost
-        : null;
+    public double? RelativeGapPercent =>
+        BestRoute is { Cost: > 0 } route && AbsoluteGap is { } gap ? gap * 100d / route.Cost : null;
 }
 
 public interface ILittleSolver

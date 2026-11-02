@@ -62,14 +62,7 @@
     <div class="excel-import">
         <div class="control-buttons"><MudButton Variant="Variant.Outlined" Disabled="@(Disabled || _excelBusy)" OnClick="DownloadTemplate">Скачать Excel-шаблон</MudButton>
             <label class="excel-file">Загрузить Excel<InputFile @key="_excelInputKey" OnChange="ImportExcel" accept=".xlsx" disabled="@(Disabled || _excelBusy)" /></label></div>
-        <p class="supporting">.xlsx, до 1 МБ. Лист «Матрица»: названия в первой строке и столбце, 3–10 объектов. Шаблон заполнен учебным примером. Начало маршрута выберите после загрузки.</p>
         @if (_excelBusy) { <p role="status">Обработка Excel…</p> }
         @if (_excelMessage is not null) { <p class="@(_excelFailed ? "field-error" : "supporting")" role="status">@_excelMessage</p> }
     </div>
-    <details class="matrix-paste"><summary>Вставить матрицу из таблицы</summary>
-        <p>Вставьте квадратную матрицу целиком: значения разделены пробелами, табуляцией или «;», каждая строка — с новой строки. Запрет — ∞ или «-»; диагональ игнорируется.</p>
-        <textarea aria-label="Матрица для вставки" @bind="_pasteText" disabled="@Disabled" rows="4" placeholder="∞ 20 30&#10;15 ∞ 16&#10;3 5 ∞"></textarea>
-        <MudButton Variant="Variant.Outlined" Disabled="Disabled" OnClick="ApplyPaste">Применить матрицу</MudButton>
-        @if (_pasteError is not null) { <p class="field-error" role="alert">@_pasteError</p> }
-    </details>
 </section>

@@ -2,8 +2,6 @@
 {
     <section class="search-statistics"><div class="section-title-row"><h3>Статистика поиска</h3><span>Активное время: <strong>@Result.Statistics.Elapsed.TotalMilliseconds.ToString("F3") мс</strong></span></div>
         <dl class="statistics-grid"><div><dt>Создано узлов</dt><dd>@Result.Statistics.Created</dd></div><div><dt>Обработано</dt><dd>@Result.Statistics.Processed</dd></div><div><dt>Отсечено по оценке</dt><dd>@Result.Statistics.PrunedByBound</dd></div><div><dt>Недопустимых</dt><dd>@Result.Statistics.Infeasible</dd></div><div><dt>Открыто сейчас</dt><dd>@Result.Statistics.Open</dd></div><div><dt>Максимум открытых</dt><dd>@Result.Statistics.MaxOpen</dd></div></dl>
-        <p class="supporting">Созданные узлы — сформированные подзадачи; обработанные — извлечённые из очереди для исследования. Ветви также могут закрываться сразу при создании. Открытые узлы ещё предстоит исследовать.</p>
-        <p class="supporting">Время включает подготовку сессии и шагов метода Литтла. Ожидание пользователя и отрисовка не учитываются.</p>
     </section>
 }
 @code { [Parameter] public SolveResult? Result { get; set; } }

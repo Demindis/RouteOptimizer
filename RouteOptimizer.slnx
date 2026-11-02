@@ -1,7 +1,7 @@
 <Solution>
-    <Project Path="RouteOptimizer.Domain/RouteOptimizer.Domain.csproj" />
-    <Project Path="RouteOptimizer.Application/RouteOptimizer.Application.csproj" />
-    <Project Path="RouteOptimizer.Infrastructure/RouteOptimizer.Infrastructure.csproj" />
-    <Project Path="RouteOptimizer.Tests/RouteOptimizer.Tests.csproj" />
-    <Project Path="RouteOptimizer/RouteOptimizer.csproj" />
+  <Project Path="RouteOptimizer.Domain/RouteOptimizer.Domain.csproj" />
+  <Project Path="RouteOptimizer.Application/RouteOptimizer.Application.csproj" />
+  <Project Path="RouteOptimizer.Infrastructure/RouteOptimizer.Infrastructure.csproj" />
+  <Project Path="RouteOptimizer.Tests/RouteOptimizer.Tests.csproj" />
+  <Project Path="RouteOptimizer/RouteOptimizer.csproj" />
 </Solution>

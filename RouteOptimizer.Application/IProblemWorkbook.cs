@@ -1,4 +1,5 @@
 using RouteOptimizer.Domain;
+
 namespace RouteOptimizer.Application;
 
 public interface IProblemWorkbook

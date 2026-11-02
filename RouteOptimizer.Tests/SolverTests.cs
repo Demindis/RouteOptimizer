@@ -23,7 +23,13 @@ public sealed class SolverTests
     [Fact]
     public void EqualPenaltiesAndBounds_UseVertexAndCreationOrder()
     {
-        int?[,] matrix = { { null, 1, 1, 1 }, { 1, null, 1, 1 }, { 1, 1, null, 1 }, { 10, 1, 1, null } };
+        int?[,] matrix =
+        {
+            { null, 1, 1, 1 },
+            { 1, null, 1, 1 },
+            { 1, 1, null, 1 },
+            { 10, 1, 1, null },
+        };
         var session = Create(Problem(matrix));
         session.Advance();
         var root = Assert.Single(session.Steps);
@@ -40,7 +46,12 @@ public sealed class SolverTests
     public void DisconnectedCycles_WithFiniteRowsAndColumns_AreInfeasible()
     {
         int?[,] matrix =
-            { { null, 1, null, null }, { 1, null, null, null }, { null, null, null, 1 }, { null, null, 1, null } };
+        {
+            { null, 1, null, null },
+            { 1, null, null, null },
+            { null, null, null, 1 },
+            { null, null, 1, null },
+        };
         var session = Create(Problem(matrix));
         Finish(session);
         Assert.Equal(SearchStatus.Infeasible, session.Result.Status);
@@ -86,7 +97,13 @@ public sealed class SolverTests
     [Fact]
     public void SparseDirectedGraph_FindsOnlyValidCycle()
     {
-        int?[,] matrix = { { null, 1, 2, null }, { null, null, 1, 2 }, { null, 2, null, 1 }, { 1, null, null, null } };
+        int?[,] matrix =
+        {
+            { null, 1, 2, null },
+            { null, null, 1, 2 },
+            { null, 2, null, 1 },
+            { 1, null, null, null },
+        };
         matrix[3, 0] = null;
         matrix[3, 2] = 1;
         matrix[2, 0] = 1;
@@ -118,13 +135,19 @@ public sealed class SolverTests
         Assert.Equal(2, first.Result.BestRoute.Vertices[^1]);
         Assert.Equal(first.Result.BestRoute.Vertices, second.Result.BestRoute!.Vertices);
         Assert.Equal(0, first.Result.AbsoluteGap);
-        if (cost == 0) Assert.Null(first.Result.RelativeGapPercent);
+        if (cost == 0)
+            Assert.Null(first.Result.RelativeGapPercent);
     }
 
     [Fact]
     public void ForbiddenTransitionsWithoutHamiltonianCycle_AreInfeasible()
     {
-        int?[,] matrix = { { null, 1, null }, { 1, null, null }, { null, null, null } };
+        int?[,] matrix =
+        {
+            { null, 1, null },
+            { 1, null, null },
+            { null, null, null },
+        };
         var session = Create(Problem(matrix));
         Finish(session);
         Assert.Equal(SearchStatus.Infeasible, session.Result.Status);
@@ -152,7 +175,10 @@ public sealed class SolverTests
     [Fact]
     public void TraceLimit_DoesNotLimitSearchOrExposeMutableMatrices()
     {
-        var session = Create(ProblemSamples.TeachingExample(), new SearchOptions(MaxDetailedSteps: 1));
+        var session = Create(
+            ProblemSamples.TeachingExample(),
+            new SearchOptions(MaxDetailedSteps: 1)
+        );
         session.Advance();
         var first = session.Steps[0].Reduction.Reduced[0, 1];
         Finish(session);
@@ -178,7 +204,8 @@ public sealed class SolverTests
 
     internal static void Finish(ISearchSession session)
     {
-        for (var i = 0; i < 100_000 && session.Result.Status == SearchStatus.Running; i++) session.Advance();
+        for (var i = 0; i < 100_000 && session.Result.Status == SearchStatus.Running; i++)
+            session.Advance();
         Assert.NotEqual(SearchStatus.Running, session.Result.Status);
     }
 

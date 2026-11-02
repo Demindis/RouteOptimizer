@@ -9,7 +9,13 @@ public sealed class SearchLimitsTests
         public long Timestamp { get; set; }
         public long IncrementPerRead { get; set; }
         public override long TimestampFrequency => TimeSpan.TicksPerSecond;
-        public override long GetTimestamp() { var value = Timestamp; Timestamp += IncrementPerRead; return value; }
+
+        public override long GetTimestamp()
+        {
+            var value = Timestamp;
+            Timestamp += IncrementPerRead;
+            return value;
+        }
     }
 
     [Fact]
@@ -24,7 +30,10 @@ public sealed class SearchLimitsTests
         Assert.Equal(TimeSpan.Zero, idle.Result.Statistics.Elapsed);
 
         clock.IncrementPerRead = TimeSpan.TicksPerSecond;
-        var active = solver.CreateSession(ProblemSamples.TeachingExample(), new SearchOptions(TimeSpan.FromSeconds(2)));
+        var active = solver.CreateSession(
+            ProblemSamples.TeachingExample(),
+            new SearchOptions(TimeSpan.FromSeconds(2))
+        );
         active.Advance();
         Assert.Equal(SearchStatus.Stopped, active.Result.Status);
         Assert.Equal(StopReason.TimeLimit, active.Result.StopReason);
@@ -36,7 +45,9 @@ public sealed class SearchLimitsTests
     public void OpenNodeLimit_RetainsParentAndValidGlobalBound()
     {
         var session = new LittleSolver().CreateSession(
-            ProblemSamples.TeachingExample(), new SearchOptions(MaxOpenNodes: 1));
+            ProblemSamples.TeachingExample(),
+            new SearchOptions(MaxOpenNodes: 1)
+        );
         session.Advance();
         Assert.Equal(SearchStatus.Stopped, session.Result.Status);
         Assert.Equal(StopReason.OpenNodeLimit, session.Result.StopReason);
@@ -52,7 +63,11 @@ public sealed class SearchLimitsTests
     [InlineData(1000, 10, -1)]
     public void InvalidSearchLimits_AreRejected(int milliseconds, int nodes, int trace)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new LittleSolver().CreateSession(
-            ProblemSamples.TeachingExample(), new SearchOptions(TimeSpan.FromMilliseconds(milliseconds), nodes, trace)));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new LittleSolver().CreateSession(
+                ProblemSamples.TeachingExample(),
+                new SearchOptions(TimeSpan.FromMilliseconds(milliseconds), nodes, trace)
+            )
+        );
     }
 }

@@ -1,15 +1,15 @@
-﻿@page "/"
+@page "/"
 @implements IAsyncDisposable
 <PageTitle>Задача коммивояжёра — RouteOptimizer</PageTitle>
-<div class="page-title"><div><h1>Задача коммивояжёра</h1><p>Задайте стоимости переходов. Найдите замкнутый маршрут и изучите доказательство оптимальности.</p></div><span class="dataset-label">@_datasetName</span></div>
-<SearchControls Busy="@(_busy || _experimentBusy)" Finished="@(_session is not null && _session.Result.Status != SearchStatus.Running)" Result="_session?.Result"
-                CanStop="@(_session?.Result.Status == SearchStatus.Running && !_experimentBusy)" Run="RunAsync" Step="AdvanceAsync" Stop="Stop" Reset="Reset" />
+<div class="page-title"><h1>Задача коммивояжёра</h1><span class="dataset-label">@_datasetName</span></div>
+<SearchControls Busy="_busy" Finished="@(_session is not null && _session.Result.Status != SearchStatus.Running)" Result="_session?.Result"
+                CanStop="@(_session?.Result.Status == SearchStatus.Running)" Run="RunAsync" Step="AdvanceAsync" Stop="Stop" Reset="Reset" />
 @if (_error is not null) { <div class="input-error" role="alert"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><span><strong>Проверьте исходные данные.</strong> @_error</span></div> }
 @if (_notice is not null) { <p class="change-notice" role="status">@_notice</p> }
 <div class="workspace-sheet">
     <MudTabs @bind-ActivePanelIndex="_tab" KeepPanelsAlive="true" Class="workspace-tabs" Color="Color.Primary">
         <MudTabPanel Text="Матрица стоимостей">
-            <div class="task-layout"><MatrixEditor @ref="_editor" Draft="_draft" DraftChanged="OnDraftChanged" LoadExample="LoadExample" Disabled="@(_busy || _experimentBusy)" />
+            <div class="task-layout"><MatrixEditor @ref="_editor" Draft="_draft" DraftChanged="OnDraftChanged" LoadExample="LoadExample" Disabled="_busy" />
                 <aside class="task-guide"><h2>Как решить задачу</h2><ol>
                     <li><strong>Задайте переходы</strong><p>Введите время переезда в матрицу или загрузите готовый пример.</p></li>
                     <li><strong>Запустите поиск</strong><p>«Рассчитать маршрут» найдёт решение целиком. «Выполнить шаг» обработает один узел дерева.</p></li>
@@ -29,7 +29,6 @@
             </div>
         </MudTabPanel>
         <MudTabPanel Text="Маршрут и статистика"><div class="tab-content"><RouteView Problem="_problem" Result="_session?.Result" /><StatisticsPanel Result="_session?.Result" /></div></MudTabPanel>
-        <MudTabPanel Text="Эксперимент"><div class="tab-content"><ExperimentPanel Disabled="_busy" BusyChanged="OnExperimentBusy" /></div></MudTabPanel>
         <MudTabPanel Text="О методе"><div class="tab-content method-notes">
             <h2>Как читать решение</h2><p>Метод Литтла решает задачу коммивояжёра: выбирает один замкнутый маршрут минимальной стоимости через все объекты.</p>
             <div class="help-columns"><section><h3>Редукция матрицы</h3><p>Из каждой строки вычитается её минимальная разрешённая стоимость. Затем то же выполняется для столбцов. Сумма вычтенных минимумов даёт добавку к нижней оценке.</p><p class="formula">Н₀ = Σ минимумов строк + Σ минимумов столбцов</p><p>∞ не участвует в вычитании. Нули показывают кандидатов для ветвления, но сами по себе ещё не образуют допустимый маршрут.</p></section>

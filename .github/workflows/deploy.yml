@@ -1,0 +1,87 @@
+name: Deploy RouteOptimizer to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish Blazor WebAssembly
+        run: |
+          dotnet publish RouteOptimizer/RouteOptimizer.csproj \
+            -c Release \
+            -o publish
+
+      - name: Prepare GitHub Pages
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("publish/wwwroot")
+          index = root / "index.html"
+          html = index.read_text(encoding="utf-8")
+
+          html, count = re.subn(
+              r'<base\s+href="[^"]*"\s*/?>',
+              '<base href="/RouteOptimizer/" />',
+              html,
+              count=1
+          )
+
+          if count != 1:
+              raise RuntimeError("Base href not found")
+
+          index.write_text(html, encoding="utf-8")
+
+          # Fallback for client-side routes
+          (root / "404.html").write_text(
+              html, encoding="utf-8"
+          )
+
+          # Preserve the _framework directory
+          (root / ".nojekyll").touch()
+          PY
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
